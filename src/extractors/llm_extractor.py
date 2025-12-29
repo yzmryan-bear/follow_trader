@@ -74,7 +74,7 @@ class LLMExtractor:
         Returns:
             List of TradingAction objects (may be empty if no actions found)
         """
-        prompt = self._create_extraction_prompt(message.message)
+        prompt = self._create_extraction_prompt(message.message, send_time=message.send_time)
         
         try:
             if self.provider == "openai":
@@ -88,12 +88,16 @@ class LLMExtractor:
             print(f"Error extracting actions from message: {e}")
             return []
     
-    def _create_extraction_prompt(self, message_text: str) -> str:
+    def _create_extraction_prompt(self, message_text: str, send_time: str = None) -> str:
         """Create prompt for LLM extraction."""
+        time_context = ""
+        if send_time:
+            time_context = f"\nMessage send time: {send_time}"
+        
         return f"""You are a trading action extraction system. Extract all trading actions (buy/sell) from the following message.
 
 Message:
-{message_text}
+{message_text}{time_context}
 
 Return a JSON array of trading actions. Each action should have:
 - action_type: "buy" or "sell" or "hold" or "unknown"
@@ -101,13 +105,14 @@ Return a JSON array of trading actions. Each action should have:
 - price: Price per share (float, optional)
 - quantity: Number of shares (integer, optional)
 - confidence: Confidence score 0.0-1.0
+- action_signal_time: The time when the signal was sent (extract from message send time provided above, or from the message content if a specific time is mentioned). Format should match the message send time format if provided, otherwise use a standard format like "MM/DD/YYYY HH:MM AM/PM" or ISO format.
 
 If no trading action is found, return an empty array [].
 
 Examples:
-- "Buy 100 shares of AAPL at $150" -> {{"action_type": "buy", "symbol": "AAPL", "price": 150.0, "quantity": 100, "confidence": 0.95}}
-- "sell qqq 492 from 483" -> {{"action_type": "sell", "symbol": "QQQ", "price": 492.0, "quantity": null, "confidence": 0.9}}
-- "I'm thinking about buying TSLA" -> {{"action_type": "unknown", "symbol": "TSLA", "price": null, "quantity": null, "confidence": 0.3}}
+- Message send time: "10/5/2024 12:25 PM", "Buy 100 shares of AAPL at $150" -> {{"action_type": "buy", "symbol": "AAPL", "price": 150.0, "quantity": 100, "confidence": 0.95, "action_signal_time": "10/5/2024 12:25 PM"}}
+- Message send time: "10/10/2024 5:36 AM", "sell qqq 492 from 483" -> {{"action_type": "sell", "symbol": "QQQ", "price": 492.0, "quantity": null, "confidence": 0.9, "action_signal_time": "10/10/2024 5:36 AM"}}
+- "I'm thinking about buying TSLA" -> {{"action_type": "unknown", "symbol": "TSLA", "price": null, "quantity": null, "confidence": 0.3, "action_signal_time": null}}
 
 Return ONLY valid JSON, no other text."""
     
@@ -185,7 +190,8 @@ Return ONLY valid JSON, no other text."""
                         quantity=action_data.get("quantity"),
                         confidence=float(action_data.get("confidence", 0.5)),
                         raw_message=message.message,
-                        extracted_at=datetime.now().isoformat()
+                        extracted_at=datetime.now().isoformat(),
+                        action_signal_time=action_data.get("action_signal_time")
                     )
                     
                     if action.is_valid():
