@@ -25,6 +25,7 @@ class TradingAction:
     message_id: Optional[str] = None  # Reference to original message
     raw_message: Optional[str] = None  # Original message text
     extracted_at: Optional[str] = None  # Timestamp when action was extracted
+    action_signal_time: Optional[str] = None  # Message sending time (from original message)
     
     def to_dict(self) -> dict:
         """Convert trading action to dictionary."""
@@ -36,7 +37,8 @@ class TradingAction:
             "confidence": self.confidence,
             "message_id": self.message_id,
             "raw_message": self.raw_message,
-            "extracted_at": self.extracted_at
+            "extracted_at": self.extracted_at,
+            "action_signal_time": self.action_signal_time
         }
     
     @classmethod
@@ -56,7 +58,8 @@ class TradingAction:
             confidence=data.get("confidence", 0.0),
             message_id=data.get("message_id"),
             raw_message=data.get("raw_message"),
-            extracted_at=data.get("extracted_at")
+            extracted_at=data.get("extracted_at"),
+            action_signal_time=data.get("action_signal_time")
         )
     
     def is_valid(self) -> bool:

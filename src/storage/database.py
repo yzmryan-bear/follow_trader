@@ -60,10 +60,18 @@ class Database:
                 confidence REAL NOT NULL,
                 raw_message TEXT,
                 extracted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                action_signal_time TEXT,
                 FOREIGN KEY (message_id) REFERENCES messages(id),
                 CHECK (confidence >= 0.0 AND confidence <= 1.0)
             )
         """)
+        
+        # Add action_signal_time column if it doesn't exist (for existing databases)
+        try:
+            cursor.execute("ALTER TABLE trading_actions ADD COLUMN action_signal_time TEXT")
+        except sqlite3.OperationalError:
+            # Column already exists, ignore
+            pass
         
         # Create indexes for better query performance
         cursor.execute("""
@@ -136,8 +144,8 @@ class Database:
         
         cursor.execute("""
             INSERT INTO trading_actions 
-            (message_id, action_type, symbol, price, quantity, confidence, raw_message, extracted_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            (message_id, action_type, symbol, price, quantity, confidence, raw_message, extracted_at, action_signal_time)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             message_db_id,
             action.action_type.value,
@@ -146,7 +154,8 @@ class Database:
             action.quantity,
             action.confidence,
             action.raw_message,
-            extracted_at
+            extracted_at,
+            action.action_signal_time
         ))
         
         action_db_id = cursor.lastrowid
