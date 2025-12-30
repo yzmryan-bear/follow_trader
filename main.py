@@ -6,6 +6,10 @@ import sys
 import yaml
 from pathlib import Path
 
+# Load environment variables
+from dotenv import load_dotenv
+load_dotenv()
+
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent))
 
